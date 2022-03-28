@@ -296,8 +296,11 @@ int prompt(struct command_t *command)
 		buf[index++] = c;
 		if (index >= sizeof(buf) - 1)
 			break;
-		if (c == '\n') // enter key
+		if (c == '\n'){ // enter key
+			if (index == 1)
+				return prompt(command);
 			break;
+		}
 		if (c == 4) // Ctrl+D
 			return EXIT;
 	}
@@ -463,6 +466,8 @@ int cdh(struct command_t *command)
 	int num;
 	printf("\nEnter a number: ");
 	scanf("%d", &num);
+	int c;
+	while ((c = getchar()) != '\n' && c != EOF) { }
 	if (num < 1 || num > line_count)
 	{
 		printf("Invalid number\n");
