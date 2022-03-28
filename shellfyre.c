@@ -297,8 +297,10 @@ int prompt(struct command_t *command)
 		if (index >= sizeof(buf) - 1)
 			break;
 		if (c == '\n'){ // enter key
-			if (index == 1)
+			if (index == 1){
+				tcsetattr(STDIN_FILENO, TCSANOW, &backup_termios);
 				return prompt(command);
+			}
 			break;
 		}
 		if (c == 4) // Ctrl+D
@@ -462,30 +464,41 @@ int cdh(struct command_t *command)
 	for (i = 0; i < line_count; ++i)
 		printf("%s", lines[i]);
 	
-	// Prompt the user for a number.
-	int num;
-	printf("\nEnter a number: ");
-	scanf("%d", &num);
-	int c;
-	while ((c = getchar()) != '\n' && c != EOF) { }
-	if (num < 1 || num > line_count)
+	// Prompt the user for a char.
+	char choice;
+	printf("\nEnter a number or letter: ");
+	scanf("%c", &choice);
+	if (choice >= 'a' && choice <= 'z')
+		choice -= 'a';
+	else if (choice >= 'A' && choice <= 'Z')
+		choice -= 'A';
+	else if (choice >= '1' && choice <= '9')
+		choice -= '1';
+	else
 	{
-		printf("Invalid number\n");
+		printf("Invalid input\n");
 		return SUCCESS;
 	}
+	if (choice >= line_count)
+	{
+		printf("Invalid input\n");
+		return SUCCESS;
+	}
+	while ((getchar()) != '\n'); // Clear the buffer. 
+
 	// Switch to the directory.
 	strcpy(command->name, "cd");
 	command->arg_count = 1;
 	command->args = malloc(sizeof(char *) * 1);
-	command->args[0] = malloc(strlen(lines[num - 1]) + 1);
-	for (i = 0; i < strlen(lines[num - 1]); ++i){
-		if (lines[num - 1][i] == '\n'){
-			lines[num - 1][i] = '\0';
+	command->args[0] = malloc(strlen(lines[choice]) + 1);
+	for (i = 0; i < strlen(lines[choice]); ++i){
+		if (lines[choice][i] == '\n'){
+			lines[choice][i] = '\0';
 			break;
 		}
 	}
-	//printf("hello: %s\n", lines[num - 1]+5);
-	strcpy(command->args[0], lines[num - 1]+5);
+	//printf("hello: %s\n", lines[c]+5);
+	strcpy(command->args[0], lines[choice]+5);
 	process_command(command);
 
 	return SUCCESS;
