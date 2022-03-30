@@ -558,6 +558,34 @@ void add_directory_to_history(char *path)
 	fclose(f);
 }
 
+// In this part, you will implement a command called take which takes 1 argument: the name
+// of the directory you want to create and change into. The command will create a directory
+// and change into it. The command must create the intermediate directories along the way if
+// they do not exist. For example: if you call take A/B/C, the command should create the
+// directories that do not exist and change into the last one (i.e, A/B/C).
+// Note: the idea for the command was adapted from the take command from zsh.
+int take(struct command_t *command){
+
+	//allocate memory for the args array
+	char** args = malloc(sizeof(char **) * (4));
+	args[0] = "mkdir";
+	args[1] = command->args[0];
+	args[2] = "-p";
+	args[3] = NULL;
+
+	pid_t pid = fork();
+
+	if (pid == 0) // child
+		execvp("mkdir", args);
+	
+	wait(NULL);
+
+	strcpy(command->name, "cd");
+	process_command(command);
+	free(args);
+	return SUCCESS;
+}
+
 int process_command(struct command_t *command)
 {
 	int r;
@@ -585,6 +613,8 @@ int process_command(struct command_t *command)
 	if (strcmp(command->name, "cdh") == 0){
 		return cdh(command);
 	}
+	if (strcmp(command->name, "take") == 0)
+		return take(command);
 
 	pid_t pid = fork();
 
