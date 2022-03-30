@@ -586,6 +586,38 @@ int take(struct command_t *command){
 	return SUCCESS;
 }
 
+// make a get request and save the response to a string
+int currency(struct command_t *command){
+	//popen("curl -s https://api.exchangeratesapi.io/latest?base=USD", "r");
+	char* response = malloc(sizeof(char) * 1024);
+	char* url = malloc(sizeof(char) * 1024);
+	strcpy(url, "curl -s -S \"https://free.currconv.com/api/v7/convert?q=");
+	strcat(url, command->args[0]);
+	strcat(url, "&compact=ultra&apiKey=d527543660bed7ba1595\"");
+	FILE* f = popen(url, "r");
+	fgets(response, 1024, f);
+	pclose(f);
+	char* printed = malloc(sizeof(char) * 1024);
+	strcpy(printed, "The current exchange rate for ");
+	strcat(printed, command->args[0]);
+	strcat(printed, " is ");
+	char *tkn = strtok(response, ":");
+	tkn = strtok(NULL, ":");
+	for (int i = 0; i < strlen(tkn); ++i)
+	{
+		if (tkn[i] == '}')
+		{
+			tkn[i] = '\0';
+			break;
+		}
+	}
+	strcat(printed, tkn);
+	printf("%s\n", printed);
+	free(url);
+	free(response);
+	return SUCCESS;
+}
+
 int process_command(struct command_t *command)
 {
 	int r;
@@ -615,6 +647,8 @@ int process_command(struct command_t *command)
 	}
 	if (strcmp(command->name, "take") == 0)
 		return take(command);
+	if (strcmp(command->name, "currency") == 0)
+		return currency(command);
 
 	pid_t pid = fork();
 
