@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <sys/stat.h>
 const char *sysname = "shellfyre";
 
 enum return_codes
@@ -630,37 +631,84 @@ int currency(struct command_t *command)
 }
 
 // Fetch joke from https://icanhazdadjoke.com using curl and notifiy the user using notify-send every 15 minutes using crontab
-int joker()
+int joker(struct command_t *command)
 {
 
-	// Create joker.sh file in User directory
-	char *home = getenv("HOME");
-	char *joker_file = malloc(strlen(home) + strlen("/joker.sh") + 1);
-	strcpy(joker_file, home);
-	strcat(joker_file, "/joker.sh");
+	// No args means wrong input
+	if (command->args[0] == NULL)
+	{
+		printf("Invalid input\n");
+		printf("Usage: joker start/stop\n");
+		return SUCCESS;
+	}
 
-	FILE *f = fopen(joker_file, "w");
-	fprintf(f, "#!/bin/bash\n");
-	fprintf(f, "curl -s https://icanhazdadjoke.com/ | notify-send \"$(cat)\"");
-	fclose(f);
+	// If it is a valid command, clean the crontab
+	if (strcmp(command->args[0], "stop") == 0 || strcmp(command->args[0], "start") == 0)
+	{
+		system("crontab -l > crontab");
+		FILE *f = fopen("crontab", "w");
+		fprintf(f, " ");
+		fclose(f);
+		system("crontab crontab");
+	}
 
-	// Create crontab file in User directory
-	char *crontab_file = malloc(strlen(home) + strlen("/crontab") + 1);
-	strcpy(crontab_file, home);
-	strcat(crontab_file, "/crontab");
+	if (strcmp(command->args[0], "start") == 0)
+	{
+		int every_x_minutes = 15;
+		// If the user specified a valid frequency, use that instead
+		if (command->args[1] != NULL)
+			every_x_minutes = atoi(command->args[1]) ? atoi(command->args[1]) : 15;
 
-	f = fopen(crontab_file, "w");
-	fprintf(f, "* * * * * %s\n", joker_file);
-	fclose(f);
+		printf("%s", command->args[1]);
+		// Create joker.sh file in User directory
+		char *home = getenv("HOME");
+		char *joker_file = malloc(strlen(home) + strlen("/joker.sh") + 1);
+		strcpy(joker_file, home);
+		strcat(joker_file, "/joker.sh");
 
-	// Add joker.sh to crontab
-	system("crontab -l > crontab");
-	f = fopen("crontab", "a");
-	fprintf(f, "* * * * * %s\n", joker_file);
-	fclose(f);
-	system("crontab crontab");
-	free(crontab_file);
-	free(joker_file);
+		// Write fetch and notify-send commands to joker.sh
+		FILE *f = fopen(joker_file, "w");
+		fprintf(f, "#!/bin/bash\n");
+		fprintf(f, "IP_MSG=\"$(/snap/bin/curl --no-progress-meter https://icanhazdadjoke.com 2>&1)\"\n");
+		fprintf(f, "STATUS=$?\n\n");
+		fprintf(f, "ICON=\"face-laugh\"\n\n");
+		fprintf(f, "if [ $STATUS -ne 0 ]; then\n");
+		fprintf(f, "    MESSAGE=\"Error Occurred! [ $IP_MSG ]\"\n");
+		fprintf(f, "    ICON=\"dialog-error\"\n");
+		fprintf(f, "else\n");
+		fprintf(f, "    MESSAGE=\"$IP_MSG\"\n");
+		fprintf(f, "fi\n\n");
+		fprintf(f, "XDG_RUNTIME_DIR=/run/user/$(id -u) notify-send -t 4000 -i \"$ICON\" \"Ha ha ha\" \"$MESSAGE\"\n");
+		fclose(f);
+
+		// Make joker.sh executable
+		chmod(joker_file, S_IRWXU);
+
+		// Create crontab file in User directory
+		char *crontab_file = malloc(strlen(home) + strlen("/crontab") + 1);
+		strcpy(crontab_file, home);
+		strcat(crontab_file, "/crontab");
+
+		f = fopen(crontab_file, "w");
+		fprintf(f, "* * * * * %s\n", joker_file);
+		fclose(f);
+
+		// Add joker.sh to crontab
+		system("crontab -l > crontab");
+		f = fopen("crontab", "a");
+		fprintf(f, "*/%d * * * * %s\n", every_x_minutes, joker_file);
+		fclose(f);
+		system("crontab crontab");
+		free(crontab_file);
+		free(joker_file);
+	}
+	else
+	{
+		// Other args are invalid
+		printf("Invalid input\n");
+		printf("Usage: joker start/stop\n");
+		return SUCCESS;
+	}
 
 	return SUCCESS;
 }
@@ -710,7 +758,7 @@ int process_command(struct command_t *command)
 
 	if (strcmp(command->name, "joker") == 0)
 	{
-		return joker();
+		return joker(command);
 	}
 
 	pid_t pid = fork();
