@@ -296,8 +296,10 @@ int prompt(struct command_t *command)
 		buf[index++] = c;
 		if (index >= sizeof(buf) - 1)
 			break;
-		if (c == '\n'){ // enter key
-			if (index == 1){
+		if (c == '\n')
+		{ // enter key
+			if (index == 1)
+			{
 				tcsetattr(STDIN_FILENO, TCSANOW, &backup_termios);
 				return prompt(command);
 			}
@@ -346,83 +348,87 @@ int main()
 	return 0;
 }
 
-int filesearch(struct command_t *command, char *relative_path) 	{
-		if (command->arg_count > 0)
+int filesearch(struct command_t *command, char *relative_path)
+{
+	if (command->arg_count > 0)
+	{
+		char *keyword = command->args[0];
+		int recursive = 0;
+		int open = 0;
+		int i;
+		for (i = 1; i < command->arg_count; ++i)
 		{
-			char *keyword = command->args[0];
-			int recursive = 0;
-			int open = 0;
-			int i;
-			for (i = 1; i < command->arg_count; ++i)
+			if (strcmp(command->args[i], "-r") == 0)
+				recursive = 1;
+			else if (strcmp(command->args[i], "-o") == 0)
+				open = 1;
+		}
+		if (recursive)
+		{
+			DIR *dir;
+			struct dirent *ent;
+			if ((dir = opendir(".")) != NULL)
 			{
-				if (strcmp(command->args[i], "-r") == 0)
-					recursive = 1;
-				else if (strcmp(command->args[i], "-o") == 0)
-					open = 1;
-			}
-			if (recursive)
-			{
-				DIR *dir;
-				struct dirent *ent;
-				if ((dir = opendir(".")) != NULL)
+				while ((ent = readdir(dir)) != NULL)
 				{
-					while ((ent = readdir(dir)) != NULL)
+					if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+						continue;
+					if (ent->d_type == DT_DIR)
 					{
-						if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-							continue;
-						if (ent->d_type == DT_DIR)
-						{
-							chdir(ent->d_name);
-              char *new_relative_path = malloc(sizeof(char) * (strlen(ent->d_name) + strlen(relative_path) + 2));
-              strcpy(new_relative_path, relative_path);
-              strcat(new_relative_path, "/");
-              strcat(new_relative_path, ent->d_name);
-							filesearch(command, new_relative_path);
-							chdir("..");
-						}
-            else {
-              if (strstr(ent->d_name, keyword) != NULL)
-              {
-                if (open){
-                  char *cmd = malloc(sizeof(char) * (strlen(ent->d_name) + strlen(sysname) + strlen("xdg-open ") + 1));
-                  strcpy(cmd, "xdg-open ");
-                  strcat(cmd, ent->d_name);
-                  system(cmd);
-                }
-                printf("%s/%s\n", relative_path, ent->d_name);
-              }
-            }
+						chdir(ent->d_name);
+						char *new_relative_path = malloc(sizeof(char) * (strlen(ent->d_name) + strlen(relative_path) + 2));
+						strcpy(new_relative_path, relative_path);
+						strcat(new_relative_path, "/");
+						strcat(new_relative_path, ent->d_name);
+						filesearch(command, new_relative_path);
+						chdir("..");
 					}
-					closedir(dir);
-				}
-			}
-			else
-			{
-				DIR *dir;
-				struct dirent *ent;
-				if ((dir = opendir(".")) != NULL)
-				{
-					while ((ent = readdir(dir)) != NULL)
+					else
 					{
-						if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-							continue;
 						if (strstr(ent->d_name, keyword) != NULL)
 						{
-							if (open){
-                char *cmd = malloc(sizeof(char) * (strlen(ent->d_name) + strlen(sysname) + strlen("xdg-open ") + 1));
-                strcpy(cmd, "xdg-open ");
-                strcat(cmd, ent->d_name);
-                system(cmd);
-              }
-							printf("%s\n", ent->d_name);
+							if (open)
+							{
+								char *cmd = malloc(sizeof(char) * (strlen(ent->d_name) + strlen(sysname) + strlen("xdg-open ") + 1));
+								strcpy(cmd, "xdg-open ");
+								strcat(cmd, ent->d_name);
+								system(cmd);
+							}
+							printf("%s/%s\n", relative_path, ent->d_name);
 						}
 					}
-					closedir(dir);
 				}
+				closedir(dir);
 			}
-			return SUCCESS;
 		}
+		else
+		{
+			DIR *dir;
+			struct dirent *ent;
+			if ((dir = opendir(".")) != NULL)
+			{
+				while ((ent = readdir(dir)) != NULL)
+				{
+					if (strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+						continue;
+					if (strstr(ent->d_name, keyword) != NULL)
+					{
+						if (open)
+						{
+							char *cmd = malloc(sizeof(char) * (strlen(ent->d_name) + strlen(sysname) + strlen("xdg-open ") + 1));
+							strcpy(cmd, "xdg-open ");
+							strcat(cmd, ent->d_name);
+							system(cmd);
+						}
+						printf("%s\n", ent->d_name);
+					}
+				}
+				closedir(dir);
+			}
+		}
+		return SUCCESS;
 	}
+}
 
 // The command takes no arguments.
 // After calling cdh, the shell should output a list of most recently visited directories. The list
@@ -430,10 +436,10 @@ int filesearch(struct command_t *command, char *relative_path) 	{
 // The shell would then prompt the user which directory they want to navigate to; the user
 // can select either a letter or a number from the list. After this, the shell should switch to
 // that directory. If there are no previous directories to select from, the shell should output a
-// warning. 
+// warning.
 int cdh(struct command_t *command)
 {
-		char *home = getenv("HOME");
+	char *home = getenv("HOME");
 	char *history_file = malloc(strlen(home) + strlen(".dir_history") + 1);
 	strcpy(history_file, home);
 	strcat(history_file, "/.dir_history");
@@ -463,7 +469,7 @@ int cdh(struct command_t *command)
 	int i;
 	for (i = 0; i < line_count; ++i)
 		printf("%s", lines[i]);
-	
+
 	// Prompt the user for a char.
 	char choice;
 	printf("\nEnter a number or letter: ");
@@ -484,21 +490,24 @@ int cdh(struct command_t *command)
 		printf("Invalid input\n");
 		return SUCCESS;
 	}
-	while ((getchar()) != '\n'); // Clear the buffer. 
+	while ((getchar()) != '\n')
+		; // Clear the buffer.
 
 	// Switch to the directory.
 	strcpy(command->name, "cd");
 	command->arg_count = 1;
 	command->args = malloc(sizeof(char *) * 1);
 	command->args[0] = malloc(strlen(lines[choice]) + 1);
-	for (i = 0; i < strlen(lines[choice]); ++i){
-		if (lines[choice][i] == '\n'){
+	for (i = 0; i < strlen(lines[choice]); ++i)
+	{
+		if (lines[choice][i] == '\n')
+		{
 			lines[choice][i] = '\0';
 			break;
 		}
 	}
 	//printf("hello: %s\n", lines[c]+5);
-	strcpy(command->args[0], lines[choice]+5);
+	strcpy(command->args[0], lines[choice] + 5);
 	process_command(command);
 
 	return SUCCESS;
@@ -564,10 +573,11 @@ void add_directory_to_history(char *path)
 // they do not exist. For example: if you call take A/B/C, the command should create the
 // directories that do not exist and change into the last one (i.e, A/B/C).
 // Note: the idea for the command was adapted from the take command from zsh.
-int take(struct command_t *command){
+int take(struct command_t *command)
+{
 
 	//allocate memory for the args array
-	char** args = malloc(sizeof(char **) * (4));
+	char **args = malloc(sizeof(char **) * (4));
 	args[0] = "mkdir";
 	args[1] = command->args[0];
 	args[2] = "-p";
@@ -577,7 +587,7 @@ int take(struct command_t *command){
 
 	if (pid == 0) // child
 		execvp("mkdir", args);
-	
+
 	wait(NULL);
 
 	strcpy(command->name, "cd");
@@ -587,17 +597,18 @@ int take(struct command_t *command){
 }
 
 // make a get request and save the response to a string
-int currency(struct command_t *command){
+int currency(struct command_t *command)
+{
 	//popen("curl -s https://api.exchangeratesapi.io/latest?base=USD", "r");
-	char* response = malloc(sizeof(char) * 1024);
-	char* url = malloc(sizeof(char) * 1024);
+	char *response = malloc(sizeof(char) * 1024);
+	char *url = malloc(sizeof(char) * 1024);
 	strcpy(url, "curl -s -S \"https://free.currconv.com/api/v7/convert?q=");
 	strcat(url, command->args[0]);
 	strcat(url, "&compact=ultra&apiKey=d527543660bed7ba1595\"");
-	FILE* f = popen(url, "r");
+	FILE *f = popen(url, "r");
 	fgets(response, 1024, f);
 	pclose(f);
-	char* printed = malloc(sizeof(char) * 1024);
+	char *printed = malloc(sizeof(char) * 1024);
 	strcpy(printed, "The current exchange rate for ");
 	strcat(printed, command->args[0]);
 	strcat(printed, " is ");
@@ -618,6 +629,42 @@ int currency(struct command_t *command){
 	return SUCCESS;
 }
 
+// Fetch joke from https://icanhazdadjoke.com using curl and notifiy the user using notify-send every 15 minutes using crontab
+int joker()
+{
+
+	// Create joker.sh file in User directory
+	char *home = getenv("HOME");
+	char *joker_file = malloc(strlen(home) + strlen("/joker.sh") + 1);
+	strcpy(joker_file, home);
+	strcat(joker_file, "/joker.sh");
+
+	FILE *f = fopen(joker_file, "w");
+	fprintf(f, "#!/bin/bash\n");
+	fprintf(f, "curl -s https://icanhazdadjoke.com/ | notify-send \"$(cat)\"");
+	fclose(f);
+
+	// Create crontab file in User directory
+	char *crontab_file = malloc(strlen(home) + strlen("/crontab") + 1);
+	strcpy(crontab_file, home);
+	strcat(crontab_file, "/crontab");
+
+	f = fopen(crontab_file, "w");
+	fprintf(f, "* * * * * %s\n", joker_file);
+	fclose(f);
+
+	// Add joker.sh to crontab
+	system("crontab -l > crontab");
+	f = fopen("crontab", "a");
+	fprintf(f, "* * * * * %s\n", joker_file);
+	fclose(f);
+	system("crontab crontab");
+	free(crontab_file);
+	free(joker_file);
+
+	return SUCCESS;
+}
+
 int process_command(struct command_t *command)
 {
 	int r;
@@ -635,20 +682,36 @@ int process_command(struct command_t *command)
 			if (r == -1)
 				printf("-%s: %s: %s\n", sysname, command->name, strerror(errno));
 			else
-				// for the cdh command 
+				// for the cdh command
 				add_directory_to_history(getcwd(NULL, 0));
 			return SUCCESS;
 		}
 	}
+
 	if (strcmp(command->name, "filesearch") == 0)
-    return filesearch(command, ".");
-	if (strcmp(command->name, "cdh") == 0){
+	{
+		return filesearch(command, ".");
+	}
+
+	if (strcmp(command->name, "cdh") == 0)
+	{
 		return cdh(command);
 	}
+
 	if (strcmp(command->name, "take") == 0)
+	{
 		return take(command);
+	}
+
 	if (strcmp(command->name, "currency") == 0)
+	{
 		return currency(command);
+	}
+
+	if (strcmp(command->name, "joker") == 0)
+	{
+		return joker();
+	}
 
 	pid_t pid = fork();
 
