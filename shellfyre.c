@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include<sys/ioctl.h>
 const char *sysname = "shellfyre";
 
 enum return_codes
@@ -28,6 +30,11 @@ struct command_t
 	char *redirects[3];		// in/out redirection
 	struct command_t *next; // for piping
 };
+
+int moduleInstalled = 0;
+
+#define PS_BFS _IOW('a','a',int32_t*)
+#define PS_DFS _IOW('a','b',int32_t*)
 
 /**
  * Prints a command struct
@@ -713,14 +720,72 @@ int joker(struct command_t *command)
 	return SUCCESS;
 }
 
+// When the command is called for the first time, shellfyre will prompt sudo password
+// to load the module into the kernel. After the module is loaded by the first call,
+// the tree traversal operation on the targeted PID will run. Successive calls to the
+// command will not load the module again. They will only invoke tree traversal
+// operations by on targeted PIDs. In the first call of the command, the traversal
+// operation can be run by the initialization function of the kernel module. In the
+// following calls, you can use ioctl function calls to trigger the operations.
+// shellfyre should remove the module from kernel when the shell is exited.
+int pstraverse(struct command_t *command){
+	if (command->args[0] == NULL)
+	{
+		printf("Invalid input\n");
+		return SUCCESS;
+	}
+
+	int pid = atoi(command->args[0]);
+	if (pid == 0)
+	{
+		printf("Invalid input\n");
+		return SUCCESS;
+	}
+
+	// If the module is not loaded, load it
+	if ( moduleInstalled == 0)
+	{
+		system("sudo insmod my_module.ko");
+		moduleInstalled = 1;
+	}
+
+	// If the module is loaded, initialize the traversal operation
+	if (moduleInstalled == 1)
+	{
+		int fd = open("/dev/my_device", O_RDWR);
+		if (fd < 0)
+		{
+			printf("Error opening device file\n");
+			return SUCCESS;
+		}
+		// look at the second argument to check if its -b or -d
+		// if -b, then initialize the traversal operation with bfs
+		// if -d, then initialize the traversal operation with dfs
+		if (command->args[1] != NULL && strcmp(command->args[1], "-b") == 0)
+		{
+			ioctl(fd, PS_BFS, &pid);
+		}
+		else if (command->args[1] != NULL && strcmp(command->args[1], "-d") == 0)
+		{
+			ioctl(fd, PS_DFS, &pid);
+		}
+		close(fd);
+	}
+
+	return SUCCESS;
+}
+
 int process_command(struct command_t *command)
 {
 	int r;
 	if (strcmp(command->name, "") == 0)
 		return SUCCESS;
 
-	if (strcmp(command->name, "exit") == 0)
+	if (strcmp(command->name, "exit") == 0){
+		system("sudo rmmod my_module");
+		moduleInstalled = 0;
 		return EXIT;
+	}
 
 	if (strcmp(command->name, "cd") == 0)
 	{
@@ -759,6 +824,11 @@ int process_command(struct command_t *command)
 	if (strcmp(command->name, "joker") == 0)
 	{
 		return joker(command);
+	}
+
+	if (strcmp(command->name, "pstraverse") == 0)
+	{
+		return pstraverse(command);
 	}
 
 	pid_t pid = fork();
