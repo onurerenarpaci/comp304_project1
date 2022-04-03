@@ -514,7 +514,7 @@ int cdh(struct command_t *command)
 			break;
 		}
 	}
-	//printf("hello: %s\n", lines[c]+5);
+	// printf("hello: %s\n", lines[c]+5);
 	strcpy(command->args[0], lines[choice] + 5);
 	process_command(command);
 
@@ -584,7 +584,7 @@ void add_directory_to_history(char *path)
 int take(struct command_t *command)
 {
 
-	//allocate memory for the args array
+	// allocate memory for the args array
 	char **args = malloc(sizeof(char **) * (4));
 	args[0] = "mkdir";
 	args[1] = command->args[0];
@@ -607,7 +607,7 @@ int take(struct command_t *command)
 // make a get request and save the response to a string
 int currency(struct command_t *command)
 {
-	//popen("curl -s https://api.exchangeratesapi.io/latest?base=USD", "r");
+	// popen("curl -s https://api.exchangeratesapi.io/latest?base=USD", "r");
 	char *response = malloc(sizeof(char) * 1024);
 	char *url = malloc(sizeof(char) * 1024);
 	strcpy(url, "curl -s -S \"https://free.currconv.com/api/v7/convert?q=");
@@ -635,6 +635,248 @@ int currency(struct command_t *command)
 	free(url);
 	free(response);
 	return SUCCESS;
+}
+
+// List files in the ./trash directory
+void list_trash()
+{
+	char *home = getenv("HOME");
+	char *trash_dir = malloc(strlen(home) + strlen("/.trash") + 1);
+	strcpy(trash_dir, home);
+	strcat(trash_dir, "/.trash");
+	DIR *dir = opendir(trash_dir);
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_name[0] != '.')
+		{
+			printf("%s\n", entry->d_name);
+		}
+	}
+
+	closedir(dir);
+	free(trash_dir);
+}
+
+// Delete files in the ./trash directory
+void empty_trash()
+{
+	char *home = getenv("HOME");
+	char *trash_dir = malloc(strlen(home) + strlen("/.trash") + 1);
+	strcpy(trash_dir, home);
+	strcat(trash_dir, "/.trash");
+	DIR *dir = opendir(trash_dir);
+	struct dirent *entry;
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_name[0] != '.')
+		{
+			char *file = malloc(strlen(trash_dir) + strlen(entry->d_name) + 1);
+			strcpy(file, trash_dir);
+			strcat(file, "/");
+			strcat(file, entry->d_name);
+			remove(file);
+			free(file);
+		}
+	}
+	closedir(dir);
+	free(trash_dir);
+}
+
+// Restore a file from the ./trash directory
+// First list all files with index, then ask user to select one
+// Then restore the file to the current directory
+void restore_from_trash()
+{
+	char *home = getenv("HOME");
+	char *trash_dir = malloc(strlen(home) + strlen("/.trash") + 1);
+	strcpy(trash_dir, home);
+	strcat(trash_dir, "/.trash");
+	DIR *dir = opendir(trash_dir);
+	struct dirent *entry;
+	int index = 0;
+	char *files[100];
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_name[0] != '.')
+		{
+			files[index] = malloc(strlen(entry->d_name) + 1);
+			strcpy(files[index++], entry->d_name);
+		}
+	}
+	closedir(dir);
+	for (int i = 0; i < index; ++i)
+	{
+		printf("%d. %s\n", i + 1, files[i]);
+	}
+	int choice = 0;
+	printf("Enter the index of the file you want to restore: ");
+	scanf("%d", &choice);
+	if (choice > 0 && choice <= index)
+	{
+		char *file = malloc(strlen(trash_dir) + strlen(files[choice - 1]) + 2);
+		strcpy(file, trash_dir);
+		strcat(file, "/");
+		strcat(file, files[choice - 1]);
+		char *dest = malloc(strlen("./") + strlen(files[choice - 1]) + 1);
+		strcpy(dest, "./");
+		strcat(dest, files[choice - 1]);
+		char *move_command = malloc(strlen("mv ") + strlen(file) + strlen(dest) + 1);
+		strcpy(move_command, "mv ");
+		strcat(move_command, file);
+		strcat(move_command, " ");
+		strcat(move_command, dest);
+		printf("%s\n", move_command);
+		system(move_command);
+		free(file);
+		free(dest);
+		free(move_command);
+	}
+	for (int i = 0; i < index; ++i)
+	{
+		free(files[i]);
+	}
+	free(trash_dir);
+}
+
+// Delete a file from the ./trash directory
+// First list all files with index, then ask user to select one
+// Then delete the file from ./trash directory
+void delete_from_trash()
+{
+	char *home = getenv("HOME");
+	char *trash_dir = malloc(strlen(home) + strlen("/.trash") + 1);
+	strcpy(trash_dir, home);
+	strcat(trash_dir, "/.trash");
+	DIR *dir = opendir(trash_dir);
+	struct dirent *entry;
+	int index = 0;
+	char *files[100];
+	while ((entry = readdir(dir)) != NULL)
+	{
+		if (entry->d_name[0] != '.')
+		{
+			files[index] = malloc(strlen(entry->d_name) + 1);
+			strcpy(files[index++], entry->d_name);
+		}
+	}
+	closedir(dir);
+	for (int i = 0; i < index; ++i)
+	{
+		printf("%d. %s\n", i + 1, files[i]);
+	}
+	int choice = 0;
+	printf("Enter the index of the file you want to delete: ");
+	scanf("%d", &choice);
+	if (choice > 0 && choice <= index)
+	{
+		char *file = malloc(strlen(trash_dir) + strlen(files[choice - 1]) + 1);
+		strcpy(file, trash_dir);
+		strcat(file, "/");
+		strcat(file, files[choice - 1]);
+		char *remove_command = malloc(strlen("rm ") + strlen(file) + 1);
+		strcpy(remove_command, "rm ");
+		strcat(remove_command, file);
+		system(remove_command);
+		free(file);
+	}
+	for (int i = 0; i < index; ++i)
+	{
+		free(files[i]);
+	}
+	free(trash_dir);
+}
+
+// Move a file to the ./trash directory
+void move_to_trash(char *file_name)
+{
+	// Check the ./trash directory exists
+	char *home = getenv("HOME");
+	char *trash_dir = malloc(strlen(home) + strlen("/.trash") + 1);
+	strcpy(trash_dir, home);
+	strcat(trash_dir, "/.trash");
+	DIR *dir = opendir(trash_dir);
+	if (dir == NULL)
+	{
+		mkdir(trash_dir, 0777);
+	}
+	else
+	{
+		closedir(dir);
+	}
+
+	// Check the file exists
+	if (access(file_name, F_OK) != -1)
+	{
+		char *move_command = malloc(strlen(file_name) + strlen(trash_dir) + strlen("mv ") + 1);
+		strcpy(move_command, "mv ");
+		strcat(move_command, file_name);
+		strcat(move_command, " ");
+		strcat(move_command, trash_dir);
+		system(move_command);
+		free(move_command);
+	}
+	free(trash_dir);
+}
+
+// Trash command
+int trash(struct command_t *command)
+{
+	if (command->arg_count == 0)
+	{
+		printf("Usage: trash [OPTION]... [FILE]...\n");
+		printf("Try 'trash --help' for more information.\n");
+		return SUCCESS;
+	}
+	printf("%s\n", command->args[0]);
+	if (strcmp(command->args[0], "--help") == 0)
+	{
+		printf("Usage: trash [OPTION]... [FILE]...\n");
+		printf("Move files to the trash.\n");
+		printf("\n");
+		printf("  --help     display this help and exit\n");
+		printf("  --restore  restore a file from trash\n");
+		printf("  --delete   delete a file from trash\n");
+		printf("  --move     move a file to trash\n");
+		printf("\n");
+		return SUCCESS;
+	}
+	else if (strcmp(command->args[0], "--list") == 0)
+	{
+		// List all files in the trash
+		list_trash();
+		return SUCCESS;
+	}
+	else if (strcmp(command->args[0], "--empty") == 0)
+	{
+		// Empty the trash
+		empty_trash();
+		return SUCCESS;
+	}
+	else if (strcmp(command->args[0], "--restore") == 0)
+	{
+		// Restore a file from the trash
+		restore_from_trash();
+		return SUCCESS;
+	}
+	else if (strcmp(command->args[0], "--delete") == 0)
+	{
+		// Remove a file from the trash
+		delete_from_trash();
+		return SUCCESS;
+	}
+	else if (strcmp(command->args[0], "--move") == 0)
+	{
+		// Restore a file from the trash
+		move_to_trash(command->args[1]);
+		return SUCCESS;
+	}
+	else
+	{
+		printf("Usage: trash [OPTION]... [FILE]...\n");
+		printf("Try 'trash --help' for more information.\n");
+		return SUCCESS;
+	}
 }
 
 // Fetch joke from https://icanhazdadjoke.com using curl and notifiy the user using notify-send every 15 minutes using crontab
@@ -676,7 +918,7 @@ int joker(struct command_t *command)
 		// Write fetch and notify-send commands to joker.sh
 		FILE *f = fopen(joker_file, "w");
 		fprintf(f, "#!/bin/bash\n");
-		fprintf(f, "IP_MSG=\"$(/snap/bin/curl --no-progress-meter https://icanhazdadjoke.com 2>&1)\"\n");
+		fprintf(f, "IP_MSG=\"$(/usr/bin/curl --no-progress-meter https://icanhazdadjoke.com 2>&1)\"\n");
 		fprintf(f, "STATUS=$?\n\n");
 		fprintf(f, "ICON=\"face-laugh\"\n\n");
 		fprintf(f, "if [ $STATUS -ne 0 ]; then\n");
@@ -829,6 +1071,11 @@ int process_command(struct command_t *command)
 	if (strcmp(command->name, "pstraverse") == 0)
 	{
 		return pstraverse(command);
+	}
+	
+	if (strcmp(command->name, "trash") == 0)
+	{
+		return trash(command);
 	}
 
 	pid_t pid = fork();
