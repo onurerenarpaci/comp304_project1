@@ -920,7 +920,7 @@ int joker(struct command_t *command)
 		// Write fetch and notify-send commands to joker.sh
 		FILE *f = fopen(joker_file, "w");
 		fprintf(f, "#!/bin/bash\n");
-		fprintf(f, "IP_MSG=\"$(/usr/bin/curl --no-progress-meter https://icanhazdadjoke.com 2>&1)\"\n");
+		fprintf(f, "IP_MSG=\"$(/usr/bin/curl -s https://icanhazdadjoke.com 2>&1)\"\n");
 		fprintf(f, "STATUS=$?\n\n");
 		fprintf(f, "ICON=\"face-laugh\"\n\n");
 		fprintf(f, "if [ $STATUS -ne 0 ]; then\n");
