@@ -1,3 +1,7 @@
+//
+// Authors: Alp Ozaslan (aozaslan18), Onur Eren Arpaci (oarpaci18)
+//
+
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdio.h>
