@@ -507,7 +507,7 @@ int cdh(struct command_t *command)
 			break;
 		}
 	}
-	//printf("hello: %s\n", lines[c]+5);
+	// printf("hello: %s\n", lines[c]+5);
 	strcpy(command->args[0], lines[choice] + 5);
 	process_command(command);
 
@@ -577,7 +577,7 @@ void add_directory_to_history(char *path)
 int take(struct command_t *command)
 {
 
-	//allocate memory for the args array
+	// allocate memory for the args array
 	char **args = malloc(sizeof(char **) * (4));
 	args[0] = "mkdir";
 	args[1] = command->args[0];
@@ -600,7 +600,7 @@ int take(struct command_t *command)
 // make a get request and save the response to a string
 int currency(struct command_t *command)
 {
-	//popen("curl -s https://api.exchangeratesapi.io/latest?base=USD", "r");
+	// popen("curl -s https://api.exchangeratesapi.io/latest?base=USD", "r");
 	char *response = malloc(sizeof(char) * 1024);
 	char *url = malloc(sizeof(char) * 1024);
 	strcpy(url, "curl -s -S \"https://free.currconv.com/api/v7/convert?q=");
@@ -669,7 +669,7 @@ int joker(struct command_t *command)
 		// Write fetch and notify-send commands to joker.sh
 		FILE *f = fopen(joker_file, "w");
 		fprintf(f, "#!/bin/bash\n");
-		fprintf(f, "IP_MSG=\"$(/snap/bin/curl --no-progress-meter https://icanhazdadjoke.com 2>&1)\"\n");
+		fprintf(f, "IP_MSG=\"$(/usr/bin/curl --no-progress-meter https://icanhazdadjoke.com 2>&1)\"\n");
 		fprintf(f, "STATUS=$?\n\n");
 		fprintf(f, "ICON=\"face-laugh\"\n\n");
 		fprintf(f, "if [ $STATUS -ne 0 ]; then\n");
