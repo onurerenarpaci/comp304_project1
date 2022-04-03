@@ -10,7 +10,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include<sys/ioctl.h>
+#include <sys/ioctl.h>
 const char *sysname = "shellfyre";
 
 enum return_codes
@@ -33,8 +33,8 @@ struct command_t
 
 int moduleInstalled = 0;
 
-#define PS_BFS _IOW('a','a',int32_t*)
-#define PS_DFS _IOW('a','b',int32_t*)
+#define PS_BFS _IOW('a', 'a', int32_t *)
+#define PS_DFS _IOW('a', 'b', int32_t *)
 
 /**
  * Prints a command struct
@@ -360,16 +360,18 @@ int filesearch(struct command_t *command, char *relative_path)
 {
 	if (command->arg_count > 0)
 	{
-		char *keyword = command->args[0];
+		char *keyword;
 		int recursive = 0;
 		int open = 0;
 		int i;
-		for (i = 1; i < command->arg_count; ++i)
+		for (i = 0; i < command->arg_count; ++i)
 		{
 			if (strcmp(command->args[i], "-r") == 0)
 				recursive = 1;
 			else if (strcmp(command->args[i], "-o") == 0)
 				open = 1;
+			else
+				keyword = command->args[i];
 		}
 		if (recursive)
 		{
@@ -970,7 +972,8 @@ int joker(struct command_t *command)
 // operation can be run by the initialization function of the kernel module. In the
 // following calls, you can use ioctl function calls to trigger the operations.
 // shellfyre should remove the module from kernel when the shell is exited.
-int pstraverse(struct command_t *command){
+int pstraverse(struct command_t *command)
+{
 	if (command->args[0] == NULL)
 	{
 		printf("Invalid input\n");
@@ -985,7 +988,7 @@ int pstraverse(struct command_t *command){
 	}
 
 	// If the module is not loaded, load it
-	if ( moduleInstalled == 0)
+	if (moduleInstalled == 0)
 	{
 		system("sudo insmod my_module.ko");
 		moduleInstalled = 1;
@@ -1023,7 +1026,8 @@ int process_command(struct command_t *command)
 	if (strcmp(command->name, "") == 0)
 		return SUCCESS;
 
-	if (strcmp(command->name, "exit") == 0){
+	if (strcmp(command->name, "exit") == 0)
+	{
 		system("sudo rmmod my_module");
 		moduleInstalled = 0;
 		return EXIT;
@@ -1072,7 +1076,7 @@ int process_command(struct command_t *command)
 	{
 		return pstraverse(command);
 	}
-	
+
 	if (strcmp(command->name, "trash") == 0)
 	{
 		return trash(command);
